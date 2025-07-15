@@ -1,14 +1,15 @@
 use std::env;
+use miette::ErrReport;
 
 fn main() -> miette::Result<()> {
     let include_path = env::var("INSPIRFACE_INCLUDE_PATH")
-        .unwrap_or("/Users/marcinthaamnouay/workspace/insightface/cpp-package/inspireface/build/inspireface-macos-apple-silicon-arm64/InspireFace/include".into());
+        .map_err(|_| ErrReport::msg("Unable to found the include path"))?;
 
     let dylib_path = env::var("INSPIRFACE_DYLIB_PATH")
-        .unwrap_or("/Users/marcinthaamnouay/workspace/insightface/cpp-package/inspireface/build/inspireface-macos-apple-silicon-arm64/InspireFace/lib".into());
+        .map_err(|_| ErrReport::msg("Unable to found the library path"))?;
 
-    let build = autocxx_build::Builder::new("src/main.rs", [&include_path]).build()?;
-    build
+    autocxx_build::Builder::new("src/ffi_wrapper.rs", [&include_path])
+        .build()?
         .compile("inspire-face");
 
     println!("cargo::rustc-link-search=native={dylib_path}");

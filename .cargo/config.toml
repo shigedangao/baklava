@@ -1,0 +1,3 @@
+[env]
+INSPIRFACE_INCLUDE_PATH = "/Users/marcintha/workspace/insightface/cpp-package/inspireface/build/inspireface-macos-apple-silicon-arm64/InspireFace/include"
+INSPIRFACE_DYLIB_PATH = "/Users/marcintha/workspace/insightface/cpp-package/inspireface/build/inspireface-macos-apple-silicon-arm64/InspireFace/lib"
