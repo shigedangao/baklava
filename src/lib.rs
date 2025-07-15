@@ -54,7 +54,7 @@ impl InsightFace {
     /// # Arguments
     /// 
     /// * `images` - &[S; 2]
-    pub fn prepare_image<S: AsRef<str>>(&mut self, images: &[S; 2]) -> Result<&mut Self, Box<dyn std::error::Error>> {
+    pub fn prepare_images<S: AsRef<str>>(&mut self, images: &[S; 2]) -> Result<&mut Self, Box<dyn std::error::Error>> {
         let mut session_ptr: *mut c_void = self.session as *mut c_void;
 
         unsafe {
