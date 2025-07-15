@@ -18,6 +18,11 @@ mod error;
 
 // Constant
 const SUCCESS: i64 = HSUCCEED as i64;
+const OUTPUT_MAX: f64 = 1.0;
+const OUTPUT_MIN: f64 = 0.01;
+const MIDDLE_SCORE: f64 = 0.48;
+const STEEPNESS: f64 = 8.;
+const RECOMMENDED_COSINE_THRESHOLD: f64 = 0.48;
 
 /// InsightFace is a struct which handle the internal pointers to compare two faces and returns the cosine value
 pub struct InsightFace {
@@ -143,7 +148,7 @@ impl InsightFace {
     }
 
     /// Compare the images and return the cosine similary which can range from 1 to -1
-    pub fn compare_images(&self) -> Result<f32, Box<dyn std::error::Error>> {
+    pub fn compare_images(&self) -> Result<(f32, f64), Box<dyn std::error::Error>> {
         let feature1 = self.features.first().ok_or(FFIError::Comparison("Unable to get the first feature"))?;
         let feature2 = self.features.get(1).ok_or(FFIError::Comparison("Unable to get the second feature"))?;
 
@@ -155,6 +160,24 @@ impl InsightFace {
             }
         }
 
-        Ok(res)
+        // Compute the percentage as well by reusing the formula used in in InspireFace SDK
+        let percentage = Self::compute_percentage(res);
+
+        Ok((res, percentage))
+    }
+
+    /// Compute the percentage of similarity from the computed cosine
+    /// 
+    /// # Arguments
+    /// 
+    /// * `cosine` - f32
+    fn compute_percentage(cosine: f32) -> f64 {
+        let bias = -f64::ln((OUTPUT_MAX - MIDDLE_SCORE) / (MIDDLE_SCORE - OUTPUT_MIN));
+        let output_scale = OUTPUT_MAX - OUTPUT_MIN;
+
+        let shifted_input = STEEPNESS * (cosine as f64 - RECOMMENDED_COSINE_THRESHOLD);
+        let sigmoid = 1. / (1. + f64::exp(-shifted_input - bias));
+
+        sigmoid * output_scale + OUTPUT_MIN
     }
 }
