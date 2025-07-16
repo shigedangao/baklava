@@ -25,6 +25,8 @@ include_cpp! {
     generate_pod!("HFFaceBasicTokenSlice")
     generate!("HFReleaseImageStream")
     generate!("HFloat")
+    generate!("HFReleaseInspireFaceSession")
+    generate!("HFReleaseFaceFeature")
 }
 
 pub use ffi::*;

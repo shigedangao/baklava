@@ -6,7 +6,8 @@ use ffi_wrapper::{
     HFCreateImageStreamFromImageBitmap, HFCreateInspireFaceSessionOptional, HFDetectMode,
     HFExecuteFaceTrack, HFFaceComparison, HFFaceFeature, HFFaceFeatureWithRefExtractTo,
     HFGetTokens, HFImageBitmap, HFImageStream, HFLaunchInspireFace, HFMultipleFaceData,
-    HFReleaseImageBitmap, HFReleaseImageStream, HFSession, HSUCCEED, HFRotation, HFFaceBasicToken
+    HFReleaseImageBitmap, HFReleaseImageStream, HFSession, HSUCCEED, HFRotation, HFFaceBasicToken,
+    HFReleaseInspireFaceSession, HFReleaseFaceFeature
 };
 use std::{
     ffi::{CString, c_void as StdCVoid},
@@ -14,13 +15,13 @@ use std::{
 };
 
 mod ffi_wrapper;
-mod error;
+pub mod error;
 
-// Constant
+// Constants
 const SUCCESS: i64 = HSUCCEED as i64;
 const OUTPUT_MAX: f64 = 1.0;
 const OUTPUT_MIN: f64 = 0.01;
-const MIDDLE_SCORE: f64 = 0.48;
+const MIDDLE_SCORE: f64 = 0.6;
 const STEEPNESS: f64 = 8.;
 const RECOMMENDED_COSINE_THRESHOLD: f64 = 0.48;
 
@@ -29,6 +30,10 @@ pub struct InsightFace {
     session: *mut StdCVoid,
     features: Vec<HFFaceFeature>
 }
+
+// Implement Send for InsightFace to allow it to be used in threads. Memory management should be safe...
+// No need for Sync to be implemented as it's already done by the Mutex.
+unsafe impl Send for InsightFace {}
 
 impl InsightFace {
     /// Create a new InsightFace handler. It needs to be only call once as it build a model
@@ -161,12 +166,10 @@ impl InsightFace {
         }
 
         // Compute the percentage as well by reusing the formula used in in InspireFace SDK
-        let percentage = Self::compute_percentage(res);
-
-        Ok((res, percentage))
+        Ok((res, Self::compute_percentage(res)))
     }
 
-    /// Compute the percentage of similarity from the computed cosine
+    /// Compute the percentage of similarity from the computed cosine. Based on the inspireface SDK formula
     /// 
     /// # Arguments
     /// 
@@ -179,5 +182,19 @@ impl InsightFace {
         let sigmoid = 1. / (1. + f64::exp(-shifted_input - bias));
 
         sigmoid * output_scale + OUTPUT_MIN
+    }
+}
+
+impl Drop for InsightFace {
+    fn drop(&mut self) {
+        unsafe {
+            HFReleaseInspireFaceSession(self.session as *mut c_void);
+
+            // Release all the features
+            for feature in self.features.iter_mut() {
+                // We can safely release the feature as it was created by us using mem::zeroed()
+                HFReleaseFaceFeature(feature);
+            }
+        }
     }
 }
