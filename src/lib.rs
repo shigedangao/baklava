@@ -199,6 +199,16 @@ impl InsightFace {
         Ok((res, Self::compute_percentage(res)))
     }
 
+    /// Return whether the two faces are similar based on the cosine
+    /// 
+    /// # Arguments
+    /// 
+    /// * `cosine` - f32
+    /// * `threshold` - Option<f64>
+    pub fn is_similar(cosine: f32, threshold: Option<f64>) -> bool {
+        cosine as f64 >= threshold.unwrap_or(RECOMMENDED_COSINE_THRESHOLD)
+    }
+
     /// Compute the percentage of similarity from the computed cosine. Based on the inspireface SDK formula
     ///
     /// # Arguments
