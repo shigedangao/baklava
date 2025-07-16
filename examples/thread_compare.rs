@@ -1,6 +1,6 @@
-use std::thread;
-use std::sync::{Arc, Mutex};
 use baklava::InsightFace;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let handler = InsightFace::new("./Megatron")?;
@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let images = vec![
         ["./face1_test.png", "./face1_test.png"],
-        ["./face1_test.png", "./face2_test.png"]
+        ["./face1_test.png", "./face2_test.png"],
     ];
 
     let (tx, rx) = std::sync::mpsc::channel();
@@ -26,7 +26,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .compare_images()
                 .expect("Failed to compare images");
 
-            txc.send((cosine, percentage)).expect("Failed to send results");
+            txc.send((cosine, percentage))
+                .expect("Failed to send results");
 
             println!("Cosine: {cosine}, Percentage: {percentage}");
         }

@@ -1,5 +1,5 @@
-use std::env;
 use miette::ErrReport;
+use std::env;
 
 fn main() -> miette::Result<()> {
     let include_path = env::var("INSPIRFACE_INCLUDE_PATH")
