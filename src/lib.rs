@@ -31,6 +31,12 @@ pub struct InsightFace {
     features: Vec<HFFaceFeature>,
 }
 
+/// Methodology to use to compute get the cosine accross the selected image sources
+pub enum Methodology {
+    Mean,
+    Median,
+}
+
 // Implement Send for InsightFace to allow it to be used in threads. Memory management should be safe...
 // No need for Sync to be implemented as it's already done by the Mutex.
 unsafe impl Send for InsightFace {}
@@ -41,7 +47,11 @@ impl InsightFace {
     /// # Arguments
     ///
     /// * `model` - S
-    pub fn new<S: AsRef<str>>(model: S) -> Result<Self, Box<dyn std::error::Error>> {
+    /// * `sampling_size` - u8
+    pub fn new<S: AsRef<str>>(
+        model: S,
+        sampling_size: u8,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let model = CString::new(model.as_ref())?;
 
         // We only need to initialize the model once.
@@ -51,9 +61,13 @@ impl InsightFace {
             }
         }
 
+        let features: Vec<HFFaceFeature> = (0..sampling_size + 1)
+            .map(|_| unsafe { mem::zeroed() })
+            .collect();
+
         Ok(Self {
             session: HFSession::default(),
-            features: unsafe { vec![mem::zeroed(), mem::zeroed()] },
+            features,
         })
     }
 
@@ -61,11 +75,16 @@ impl InsightFace {
     ///
     /// # Arguments
     ///
-    /// * `images` - &[S; 2]
-    pub fn prepare_images<S: AsRef<str>>(
+    /// * `images` - &[S]
+    pub fn prepare_images<S: AsRef<str> + std::clone::Clone>(
         &mut self,
-        images: &[S; 2],
+        sources: &[S],
+        target: S,
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
+        if sources.len() != self.features.len() - 1 {
+            return Err(FFIError::SamplingSize.into());
+        }
+
         let mut session_ptr: *mut c_void = self.session as *mut c_void;
 
         unsafe {
@@ -85,6 +104,9 @@ impl InsightFace {
             // Initialize an HFMultipleFaceData structure in the way c++ would do
             let mut multiple_face_data: HFMultipleFaceData = mem::zeroed();
 
+            let mut images = sources.to_vec();
+            images.push(target);
+
             for (idx, feature) in &mut self.features.iter_mut().enumerate() {
                 if HFCreateFaceFeature(feature).0 != SUCCESS {
                     return Err(FFIError::Feature.into());
@@ -100,7 +122,7 @@ impl InsightFace {
 
                 // Create bitmap from the file path. This will be used for face analysis
                 match HFCreateImageBitmapFromFilePath(img_path.as_ptr(), c_int(3), &mut img_ptr).0 {
-                    SUCCESS => {},
+                    SUCCESS => {}
                     _ => {
                         return Err(
                             FFIError::Bitmap("image may not be the proper size or format").into(),
@@ -119,12 +141,13 @@ impl InsightFace {
                 )
                 .0
                 {
-                    SUCCESS => {},
+                    SUCCESS => {}
                     _ => {
                         InsightFace::release_ptr(img_ptr, stream_ptr);
-                        return Err(
-                            FFIError::Stream("Unable to create stream issue with rotation").into(),
-                        );
+                        return Err(FFIError::Stream(
+                            "Unable to create stream issue with rotation",
+                        )
+                        .into());
                     }
                 }
 
@@ -177,32 +200,75 @@ impl InsightFace {
     }
 
     /// Compare the images and return the cosine similary which can range from 1 to -1
-    pub fn compare_images(&self) -> Result<(f32, f64), Box<dyn std::error::Error>> {
-        let feature1 = self
+    ///
+    /// # Arguments
+    ///
+    /// * `methodology` - Methodology
+    pub fn compare_images(
+        &self,
+        methodology: Methodology,
+    ) -> Result<(f32, f64), Box<dyn std::error::Error>> {
+        let feature_target = self
             .features
-            .first()
-            .ok_or(FFIError::Comparison("Unable to get the first feature"))?;
-        let feature2 = self
-            .features
-            .get(1)
+            .last()
             .ok_or(FFIError::Comparison("Unable to get the second feature"))?;
 
-        let mut res: f32 = 0.0;
-        unsafe {
-            let op_res = HFFaceComparison(feature1, feature2, &mut res);
-            if op_res.0 != SUCCESS {
-                return Err(FFIError::Comparison("Comparison fail").into());
+        let mut cosine_result = Vec::new();
+
+        for (idx, feature) in self.features.iter().enumerate() {
+            // We want to skip the last value to compare
+            if idx == self.features.len() {
+                continue;
             }
+
+            let mut res: f32 = 0.0;
+            unsafe {
+                let op_res = HFFaceComparison(feature, feature_target, &mut res);
+                if op_res.0 != SUCCESS {
+                    return Err(FFIError::Comparison("Comparison fail").into());
+                }
+            }
+
+            cosine_result.push(res);
         }
 
+        let cosine = match methodology {
+            Methodology::Mean => {
+                cosine_result.into_iter().fold(0., |acc, x| acc + x) / self.features.len() as f32
+            }
+            Methodology::Median => {
+                // Sort the cosine result in ASC
+                cosine_result.sort_unstable_by(|a, b| a.total_cmp(b));
+                let mid = cosine_result.len() / 2;
+
+                match cosine_result.len() % 2 == 0 {
+                    true => {
+                        let low = cosine_result
+                            .get(mid - 1)
+                            .ok_or(FFIError::Comparison("Unable to get the low mid"))?;
+
+                        let high = cosine_result
+                            .get(mid + 1)
+                            .ok_or(FFIError::Comparison("Unable to get the high mid"))?;
+
+                        *low + *high / 2.
+                    }
+                    false => cosine_result
+                        .get(mid)
+                        .copied()
+                        .ok_or(FFIError::Comparison("Unable to get the median"))?,
+                }
+            }
+        };
+
         // Compute the percentage as well by reusing the formula used in in InspireFace SDK
-        Ok((res, Self::compute_percentage(res)))
+        Ok((cosine, Self::compute_percentage(cosine)))
     }
 
     /// Return whether the two faces are similar based on the cosine
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `cosine` - f32
     /// * `threshold` - Option<f64>
     pub fn is_similar(cosine: f32, threshold: Option<f64>) -> bool {
@@ -225,9 +291,9 @@ impl InsightFace {
     }
 
     /// Release pointers which are used for the image & stream
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `img_ptr` - c_void
     /// * `stream_ptr` - c_void
     fn release_ptr(img_ptr: *mut c_void, stream_ptr: *mut c_void) {

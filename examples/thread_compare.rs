@@ -3,13 +3,10 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let handler = InsightFace::new("./Megatron")?;
+    let handler = InsightFace::new("./Megatron", 1)?;
     let handler_safe = Arc::new(Mutex::new(handler));
 
-    let images = vec![
-        ["./face1_test.png", "./face1_test.png"],
-        ["./face1_test.png", "./face2_test.png"],
-    ];
+    let images = vec!["./face1_test.png", "./face2_test.png"];
 
     let (tx, rx) = std::sync::mpsc::channel();
     let (txc, rxc) = std::sync::mpsc::channel();
@@ -21,9 +18,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut inner = harc.lock().unwrap();
 
             let (cosine, percentage) = inner
-                .prepare_images(&image)
+                .prepare_images(&[image], "./face1_test.png")
                 .expect("Failed to prepare images")
-                .compare_images()
+                .compare_images(baklava::Methodology::Mean)
                 .expect("Failed to compare images");
 
             txc.send((cosine, percentage))

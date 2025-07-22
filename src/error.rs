@@ -11,6 +11,7 @@ pub enum FFIError<'a> {
     Stream(&'a str),
     FaceTrack(&'a str),
     Comparison(&'a str),
+    SamplingSize,
 }
 
 impl<'a> Error for FFIError<'a> {}
@@ -26,6 +27,7 @@ impl<'a> fmt::Display for FFIError<'a> {
             Self::Stream(msg) => write!(f, "Unable to create stream image due to: {msg}"),
             Self::FaceTrack(msg) => write!(f, "Facetrack encountered an error due to: {msg}"),
             Self::Comparison(msg) => write!(f, "Unable to compare image due to: {msg}"),
+            Self::SamplingSize => write!(f, "Unable to prepare image set due to sampling size value being different than what's expected")
         }
     }
 }
