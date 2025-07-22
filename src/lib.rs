@@ -251,7 +251,7 @@ impl InsightFace {
                             .get(mid + 1)
                             .ok_or(FFIError::Comparison("Unable to get the high mid"))?;
 
-                        *low + *high / 2.
+                        (*low + *high) / 2.
                     }
                     false => cosine_result
                         .get(mid)
