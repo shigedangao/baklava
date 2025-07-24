@@ -26,6 +26,10 @@ cd insightface/cpp-package/inspireface && git clone --recurse-submodules https:/
 cargo build
 ```
 
+## Recompile insightface
+
+If you wish to recompile the InsightFace - `rm -rf ./insightface/cpp-package/inspireface/build`
+
 ## Run
 
 ```sh

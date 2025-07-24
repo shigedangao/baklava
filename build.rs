@@ -48,27 +48,29 @@ fn main() -> miette::Result<()> {
         ));
     }
 
-    // Change the current directory
-    env::set_current_dir(&lib_path).expect("Expect to be able to change the current dir");
-
-    // Run the command to build the library
-    let status = Command::new("sh")
-        .arg("command/build.sh")
-        .status()
-        .expect("Unable to build the inspireface library {err}");
-
-    if !status.success() {
-        panic!("Expect to have build the library");
-    }
-
-    env::set_current_dir(current_dir)
-        .expect("Set to current directory in order to generate the bindings");
-
     let mut include_path = lib_path.clone();
     include_path.push(format!(
         "build/inspireface-{}/InspireFace/include",
         env::consts::OS
     ));
+
+    if !include_path.exists() {
+        // Change the current directory
+        env::set_current_dir(&lib_path).expect("Expect to be able to change the current dir");
+
+        // Run the command to build the library
+        let status = Command::new("sh")
+            .arg("command/build.sh")
+            .status()
+            .expect("Unable to build the inspireface library {err}");
+
+        if !status.success() {
+            panic!("Expect to have build the library");
+        }
+
+        env::set_current_dir(current_dir)
+            .expect("Set to current directory in order to generate the bindings");
+    }
 
     let mut dylib_path = lib_path.clone();
     dylib_path.push(format!(
