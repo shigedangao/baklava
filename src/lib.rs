@@ -10,7 +10,7 @@ use ffi_wrapper::{
     HF_ENABLE_FACE_RECOGNITION, HSUCCEED,
 };
 use std::{
-    ffi::{c_void as StdCVoid, CString},
+    ffi::CString,
     mem::{self},
 };
 
@@ -27,7 +27,7 @@ const RECOMMENDED_COSINE_THRESHOLD: f64 = 0.48;
 
 /// InsightFace is a struct which handle the internal pointers to compare two faces and returns the cosine value
 pub struct InsightFace {
-    session: *mut StdCVoid,
+    session: *mut c_void,
     features: Vec<HFFaceFeature>,
 }
 
@@ -54,6 +54,9 @@ impl InsightFace {
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let model = CString::new(model.as_ref())?;
 
+        let session = HFSession::default();
+        let mut session_ptr: *mut c_void = session as *mut c_void;
+
         // We only need to initialize the model once.
         unsafe {
             if HFLaunchInspireFace(model.as_ptr()).0 != SUCCESS {
@@ -65,8 +68,23 @@ impl InsightFace {
             .map(|_| unsafe { mem::zeroed() })
             .collect();
 
+        unsafe {
+            let res = HFCreateInspireFaceSessionOptional(
+                c_int(HF_ENABLE_FACE_RECOGNITION as i32),
+                HFDetectMode::HF_DETECT_MODE_ALWAYS_DETECT,
+                c_int(1),
+                c_int(-1),
+                c_int(-1),
+                &mut session_ptr,
+            );
+
+            if res.0 != SUCCESS {
+                return Err(FFIError::Session.into());
+            }
+        }
+
         Ok(Self {
-            session: HFSession::default(),
+            session: session_ptr,
             features,
         })
     }
@@ -85,22 +103,7 @@ impl InsightFace {
             return Err(FFIError::SamplingSize.into());
         }
 
-        let mut session_ptr: *mut c_void = self.session as *mut c_void;
-
         unsafe {
-            let res = HFCreateInspireFaceSessionOptional(
-                c_int(HF_ENABLE_FACE_RECOGNITION as i32),
-                HFDetectMode::HF_DETECT_MODE_ALWAYS_DETECT,
-                c_int(1),
-                c_int(-1),
-                c_int(-1),
-                &mut session_ptr,
-            );
-
-            if res.0 != SUCCESS {
-                return Err(FFIError::Session.into());
-            }
-
             // Initialize an HFMultipleFaceData structure in the way c++ would do
             let mut multiple_face_data: HFMultipleFaceData = mem::zeroed();
 
@@ -159,7 +162,8 @@ impl InsightFace {
                     .into());
                 }
 
-                if HFExecuteFaceTrack(session_ptr, stream_ptr, &mut multiple_face_data).0 != SUCCESS
+                if HFExecuteFaceTrack(self.session, stream_ptr, &mut multiple_face_data).0
+                    != SUCCESS
                 {
                     InsightFace::release_ptr(img_ptr, stream_ptr);
                     return Err(FFIError::FaceTrack("").into());
@@ -183,7 +187,7 @@ impl InsightFace {
                 })?;
 
                 let res =
-                    HFFaceFeatureWithRefExtractTo(session_ptr, stream_ptr, single_face, feature);
+                    HFFaceFeatureWithRefExtractTo(self.session, stream_ptr, single_face, feature);
                 if res.0 != SUCCESS {
                     InsightFace::release_ptr(img_ptr, stream_ptr);
                     return Err(
@@ -307,7 +311,7 @@ impl InsightFace {
 impl Drop for InsightFace {
     fn drop(&mut self) {
         unsafe {
-            HFReleaseInspireFaceSession(self.session as *mut c_void);
+            HFReleaseInspireFaceSession(self.session);
 
             // Release all the features
             for feature in self.features.iter_mut() {
