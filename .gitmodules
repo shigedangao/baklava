@@ -1,0 +1,3 @@
+[submodule "insightface"]
+	path = insightface
+	url = git@github.com:shigedangao/insightface.git
