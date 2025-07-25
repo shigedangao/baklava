@@ -238,7 +238,8 @@ impl InsightFace {
 
         let cosine = match methodology {
             Methodology::Mean => {
-                cosine_result.into_iter().fold(0., |acc, x| acc + x) / self.features.len() as f32
+                cosine_result.into_iter().fold(0., |acc, x| acc + x)
+                    / (self.features.len() - 1) as f32
             }
             Methodology::Median => {
                 // Sort the cosine result in ASC
