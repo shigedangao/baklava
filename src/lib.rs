@@ -221,7 +221,7 @@ impl InsightFace {
 
         for (idx, feature) in self.features.iter().enumerate() {
             // We want to skip the last value to compare
-            if idx == self.features.len() {
+            if idx == self.features.len() - 1 {
                 continue;
             }
 
