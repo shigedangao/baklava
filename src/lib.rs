@@ -344,6 +344,14 @@ impl InsightFace {
             cosine_result.push(res);
         }
 
+        // When the sample size is too small. We're unable to perform the median methodology. Hence better use the mean methodology in that case
+        if cosine_result.len() == 2 {
+            return Err(FFIError::Comparison(
+                "Sample size is too small. You should consider to use the mean methodology instead",
+            )
+            .into());
+        }
+
         let cosine = match methodology {
             Methodology::Mean => {
                 cosine_result.into_iter().fold(0., |acc, x| acc + x)
