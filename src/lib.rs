@@ -43,6 +43,7 @@ struct SessionHandler {
 }
 
 /// Methodology to use to compute get the cosine accross the selected image sources
+#[derive(PartialEq, Eq)]
 pub enum Methodology {
     Mean,
     Median,
@@ -53,6 +54,9 @@ pub enum Methodology {
 unsafe impl Send for InsightFace {}
 unsafe impl Send for SessionHandler {}
 unsafe impl Send for HFFaceFeature {}
+
+// Add Sync implementation for InsightFace should the use want to use it within a LazyLock or OnceLock
+unsafe impl Sync for InsightFace {}
 
 impl InsightFace {
     /// Create a new InsightFace handler. It needs to be only call once as it build a model
@@ -345,7 +349,7 @@ impl InsightFace {
         }
 
         // When the sample size is too small. We're unable to perform the median methodology. Hence better use the mean methodology in that case
-        if cosine_result.len() == 2 {
+        if cosine_result.len() == 2 && methodology == Methodology::Median {
             return Err(FFIError::Comparison(
                 "Sample size is too small. You should consider to use the mean methodology instead",
             )
@@ -436,5 +440,90 @@ impl Drop for InsightFace {
                 HFReleaseFaceFeature(feature);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{InsightFace, Methodology};
+    use reqwest::blocking::Client;
+    use std::sync::{Arc, LazyLock, Mutex};
+
+    static INSIGHT_FACE_CLIENT: LazyLock<Arc<Mutex<InsightFace>>> = LazyLock::new(|| {
+        download_megatron_source();
+
+        Arc::new(Mutex::new(InsightFace::new("./Megatron", None).unwrap()))
+    });
+
+    fn download_megatron_source() {
+        let client = Client::new();
+        let response = client
+            .get("https://github.com/HyperInspire/InspireFace/releases/download/v1.x/Megatron")
+            .send()
+            .unwrap();
+        let bytes = response.bytes().unwrap();
+        std::fs::write("Megatron", bytes).unwrap();
+    }
+
+    #[test]
+    fn expect_to_compare_image() {
+        let mut model = INSIGHT_FACE_CLIENT.lock().unwrap();
+
+        // Compare two images
+        let prep_image_set_1 = model
+            .prepare_images(&["./face1_test.png", "./face2_test.png"])
+            .unwrap()
+            .prepare_target_image("./face1_test.png");
+
+        assert!(prep_image_set_1.is_ok());
+
+        let prep_image_set_1 = prep_image_set_1.unwrap();
+        let (cos, percentage) = prep_image_set_1.compare_images(Methodology::Mean).unwrap();
+
+        assert!(cos > 0.6);
+        assert!(percentage > 0.6);
+    }
+
+    #[test]
+    fn expect_to_compare_image_with_median_methodology() {
+        let mut model = INSIGHT_FACE_CLIENT.lock().unwrap();
+
+        // Compare two images
+        let prep_image_set_1 = model
+            .prepare_images(&["./face1_test.png", "./face2_test.png", "./face1_test.png"])
+            .unwrap()
+            .prepare_target_image("./face1_test.png");
+
+        assert!(prep_image_set_1.is_ok());
+
+        let prep_image_set_1 = prep_image_set_1.unwrap();
+        let (cos, percentage) = prep_image_set_1
+            .compare_images(Methodology::Median)
+            .unwrap();
+
+        assert!(cos > 0.6);
+        assert!(percentage > 0.6);
+    }
+
+    #[test]
+    fn expect_median_methodology_to_fail() {
+        let mut model = INSIGHT_FACE_CLIENT.lock().unwrap();
+
+        // Compare two images
+        let prep_image_set_1 = model
+            .prepare_images(&["./face1_test.png", "./face2_test.png"])
+            .unwrap()
+            .prepare_target_image("./face1_test.png");
+
+        assert!(prep_image_set_1.is_ok());
+
+        let prep_image_set_1 = prep_image_set_1.unwrap();
+        let res = prep_image_set_1.compare_images(Methodology::Median);
+
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err().to_string(),
+            "Unable to compare image due to: Sample size is too small. You should consider to use the mean methodology instead"
+        );
     }
 }

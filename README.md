@@ -16,7 +16,16 @@ let (cosine, percentage) = InsightFace::new("<model>", None)?
     .compare_images(Methodology::Mean)?;
 ```
 
-## Install
+## Usage w/o dependency
+
+You can import the library as a dependency in your project by adding the following to your `Cargo.toml` file:
+
+```toml
+[dependencies]
+baklava = { git = "https://github.com/shigedangao/baklava.git" }
+```
+
+## Local usage
 
 1. Clone & Initialize submodules
 
