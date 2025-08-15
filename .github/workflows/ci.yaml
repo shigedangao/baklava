@@ -1,0 +1,27 @@
+name: ci
+
+on: [push]
+
+env:
+  CXXFLAGS: "-std=c++17"
+
+jobs:
+  clippy:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      # buuld the inspire-face sdk for the target env
+      - name: build the cpp project
+        working-directory: insightface/cpp-package/inspireface
+        run: bash command/build.sh
+      - uses: dtolnay/rust-toolchain@stable
+      - name: install clippy
+        run: rustup component add clippy
+      - name: build the project
+        run: cargo build
+      - name: run unit test
+        run: cargo test
+      - name: clippy
+        run: cargo clippy --all-features
