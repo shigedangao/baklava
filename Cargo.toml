@@ -6,6 +6,7 @@ edition = "2021"
 authors = ["Marc Intha-amnouay <marc.inthaamnouay@gmail.com>"]
 keywords = ["insightface", "face-comparison", "inspireface"]
 exclude = ["face1_test.png", "face2_test.png", "insightface"]
+license = "MIT"
 
 [dependencies]
 cxx = "1.0"

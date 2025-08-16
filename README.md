@@ -53,6 +53,9 @@ cargo run --example compare
 
 ## Local usage
 
+> [!IMPORTANT]
+> This guide requires you to replace the `build.rs` by the `build_local.rs`. This `build_local.rs` will build the project locally and copy the resulting `dylib` into the target directory.
+
 1. Clone & Initialize submodules
 
 ```sh
