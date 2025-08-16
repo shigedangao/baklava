@@ -1,3 +1,26 @@
+//! Baklava is a rust wrapper around the InsightFace library to perform face comparison
+//! It returns a cosine and percentage similarity between the given image's face against a target face.
+//!
+//! The cosine similarity could be either positive or negative, depending on the orientation of the faces and how close they are to each other.
+//! Usually, a cosine similarity of 0.7 or higher is considered a good match.
+//!
+//! The library can be used as simple as the example below.
+//!
+//! ```
+//! use baklava::{InsightFace, Methodology};
+//!
+//! let (cosine, percentage) = InsightFace::new("./Megatron", Some(3))
+//!    .unwrap()
+//!    .prepare_images(&[
+//!        "./face1_test.png",
+//!        "./face2_test.png",
+//!    ]).unwrap()
+//!    .prepare_target_image("./face1_test.png").unwrap()
+//!    .compare_images(Methodology::Mean).unwrap();
+//! ```
+//!
+//! To perform the comparison baklava required you to downlaod a model from the InsightFace repository
+//! that can be found at this link: <https://github.com/HyperInspire/InspireFace?tab=readme-ov-file#resource-package-list>
 use autocxx::c_void;
 use autocxx::prelude::*;
 use error::FFIError;
@@ -45,7 +68,9 @@ struct SessionHandler {
 /// Methodology to use to compute get the cosine accross the selected image sources
 #[derive(PartialEq, Eq)]
 pub enum Methodology {
+    /// Perform a mean calculation over the cosine values
     Mean,
+    /// Perform a median calculation over the cosine values
     Median,
 }
 
@@ -59,12 +84,23 @@ unsafe impl Send for HFFaceFeature {}
 unsafe impl Sync for InsightFace {}
 
 impl InsightFace {
-    /// Create a new InsightFace handler. It needs to be only call once as it build a model
+    /// Create a new InsightFace handler. It needs to be only call once as it build a model. Therefore it's recommended
+    /// to use it within an `Arc<Mutex<InsightFace>>` to ensure thread safety. Chunk size is used in order to split the image data into smaller chunks for processing.
     ///
     /// # Arguments
     ///
     /// * `model` - S
-    /// * `sampling_size` - u8
+    /// * `chunk_size` - u8
+    ///
+    ///
+    /// # Examples
+    /// ```
+    /// use std::sync::Arc;
+    /// use std::sync::Mutex;
+    /// use baklava::InsightFace;
+    ///
+    /// let insight_face = Arc::new(Mutex::new(InsightFace::new("./Megatron", None).unwrap()));
+    /// ```
     pub fn new<S: AsRef<str>>(
         model: S,
         chunk_size: Option<usize>,
@@ -108,8 +144,7 @@ impl InsightFace {
     ///
     /// # Arguments
     ///
-    /// * `images` - &[S]
-    /// * `target` - S
+    /// * `sources` - `&[S]`
     pub fn prepare_images<S: AsRef<str> + std::clone::Clone + Send + Sync + Copy>(
         &mut self,
         sources: &[S],
@@ -395,7 +430,7 @@ impl InsightFace {
     /// # Arguments
     ///
     /// * `cosine` - f32
-    /// * `threshold` - Option<f64>
+    /// * `threshold` - `Option<f64>`
     pub fn is_similar(cosine: f32, threshold: Option<f64>) -> bool {
         cosine as f64 >= threshold.unwrap_or(RECOMMENDED_COSINE_THRESHOLD)
     }

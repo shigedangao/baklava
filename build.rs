@@ -86,6 +86,7 @@ fn main() -> miette::Result<()> {
     // Build the headers for rust
     autocxx_build::Builder::new("src/ffi_wrapper.rs", [&include_path])
         .build()?
+        .flag_if_supported("-std=c++17")
         .compile("inspire-face");
 
     let dylib_file_path = format!("{dylib_path_str}/libInspireFace.dylib");
