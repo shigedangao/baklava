@@ -5,6 +5,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Marc Intha-amnouay <marc.inthaamnouay@gmail.com>"]
 keywords = ["insightface", "face-comparison", "inspireface"]
+exclude = ["face1_test.png", "face2_test.png", "insightface"]
 
 [dependencies]
 cxx = "1.0"
@@ -12,7 +13,6 @@ autocxx = "0.30.0"
 
 [build-dependencies]
 autocxx-build = "0.30.0"
-miette = { version = "5", features = ["fancy"] }
 
 [dev-dependencies]
 reqwest = { version = "0.12.23", features = ["blocking"] }

@@ -4,6 +4,7 @@ on: [push]
 
 env:
   CXXFLAGS: "-std=c++17"
+  INSIGHTFACE_PATH: "${{ github.workspace }}/insightface/cpp-package/inspireface/build/inspireface-macos/InspireFace"
 
 jobs:
   clippy:
@@ -13,6 +14,8 @@ jobs:
         with:
           submodules: recursive
       # buuld the inspire-face sdk for the target env
+      - name: print
+        run: echo $INSIGHTFACE_PATH
       - name: build the cpp project
         working-directory: insightface/cpp-package/inspireface
         run: bash command/build.sh
