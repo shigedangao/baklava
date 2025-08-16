@@ -2,9 +2,26 @@
 
 A small project that wrap the [InsightFace SDK](https://github.com/deepinsight/insightface) in order to perform face comparison. It uses a fork of InsightFace in order to implement some convenient method to be exposed for Rust that can be found [here](https://github.com/shigedangao/insightface). The implementation is based on the sample provided by the insightface team. [c example link](https://github.com/deepinsight/insightface/blob/master/cpp-package/inspireface/cpp/sample/api/sample_face_comparison.c)
 
-## Usage
+## Usage from crates.io
 
-To use the library you'll need to specify the model that will be used. These models are the same that are used by the InsightFace library. The models can be found [here](https://github.com/HyperInspire/InspireFace?tab=readme-ov-file#resource-package-list)
+> [!IMPORTANT]
+> This guide required you to download the `insightface` library and to follow the instructions in orders.
+
+1. To use the library you'll need to specify the model that will be used. These models are the same that are used by the InsightFace library. The models can be found [here](https://github.com/HyperInspire/InspireFace?tab=readme-ov-file#resource-package-list)
+
+2. Clone the insightface's fork repository using this [link](https://github.com/shigedangao/insightface) and build the `insightface` library with the command
+
+```sh
+cd insightface/cpp-package/inspireface && git clone --recurse-submodules https://github.com/tunmx/inspireface-3rdparty.git 3rdparty
+cd insightface/cpp-package/inspireface && bash command/build.sh
+```
+
+3. Specify the path to the `insightface` library in your `Cargo.toml` by adding this into your `.cargo/config.toml`:
+
+```toml
+[env]
+INSIGHTFACE_PATH = "<path to>/insightface/cpp-package/inspireface/build/inspireface-<arch>/InspireFace"
+```
 
 Thereafter the library can be add as follows in your `Cargo.toml`:
 
@@ -52,10 +69,18 @@ git submodule update --init --recursive
 cd insightface/cpp-package/inspireface && git clone --recurse-submodules https://github.com/tunmx/inspireface-3rdparty.git 3rdparty
 ```
 
-3. Build the project
+3. Replace the `build.rs` by the `build_local.rs`. This `build_local.rs` will build the project locally and copy the resulting `dylib` into the target directory.
+
+4. Build the project
 
 ```sh
 cargo build
+```
+
+5. Make sure that everything works fine by running the unit tests with
+
+```sh
+cargo test
 ```
 
 ## Recompile insightface
