@@ -1,7 +1,7 @@
 [package]
 name = "baklava"
 description = "A rust wrapper around the InsightFace library to perform face comparison"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Marc Intha-amnouay <marc.inthaamnouay@gmail.com>"]
 keywords = ["insightface", "face-comparison", "inspireface"]

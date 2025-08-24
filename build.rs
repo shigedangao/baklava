@@ -1,17 +1,31 @@
 use std::env;
 use std::path::PathBuf;
+use std::process::Command;
 
 fn main() {
     let lib_path = match env::var("INSIGHTFACE_PATH") {
         Ok(path) => PathBuf::from(path),
         Err(_) => {
             let current_dir = env::current_dir().unwrap();
-            let local_path = format!(
-                "insightface/cpp-package/inspireface/build/inspireface-{}/InspireFace",
-                env::consts::OS
-            );
+            match env::var("DOCS_RS").is_ok() {
+                true => {
+                    // The headers can be passed from the "zipped" file "insightface_headers.zip"
+                    Command::new("unzip")
+                        .arg("insightface_headers.zip")
+                        .spawn()
+                        .expect("Expect unzip command to work");
 
-            current_dir.join(local_path)
+                    current_dir
+                }
+                false => {
+                    let local_path = format!(
+                        "insightface/cpp-package/inspireface/build/inspireface-{}/InspireFace",
+                        env::consts::OS
+                    );
+
+                    current_dir.join(local_path)
+                }
+            }
         }
     };
 
