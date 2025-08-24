@@ -10,7 +10,7 @@ license = "MIT"
 
 [dependencies]
 cxx = "1.0"
-autocxx = "0.30.0"
+autocxx = { git = "https://github.com/shigedangao/autocxx.git", branch = "main" }
 
 [build-dependencies]
 autocxx-build = "0.30.0"
