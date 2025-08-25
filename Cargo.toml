@@ -10,6 +10,9 @@ license = "MIT"
 
 [dependencies]
 cxx = "1.0"
+autocxx = "0.30.0"
+
+[patch.crates-io]
 autocxx = { git = "https://github.com/shigedangao/autocxx.git", branch = "main" }
 
 [build-dependencies]
