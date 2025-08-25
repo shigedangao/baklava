@@ -34,19 +34,6 @@ checksum = "862ed96ca487e809f1c8e5a8447f6ee2cf102f846893800b20cebdf541fc6bbd"
 
 [[package]]
 name = "aquamarine"
-version = "0.1.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a941c39708478e8eea39243b5983f1c42d2717b3620ee91f4a52115fd02ac43f"
-dependencies = [
- "itertools 0.9.0",
- "proc-macro-error",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "aquamarine"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0f50776554130342de4836ba542aa85a4ddb361690d7e8df13774d7284c3d5c2"
@@ -87,7 +74,7 @@ name = "autocxx"
 version = "0.30.0"
 source = "git+https://github.com/shigedangao/autocxx.git?branch=main#1c0989db56cc955b0ca9af02092b706fc8ecfe37"
 dependencies = [
- "aquamarine 0.6.0",
+ "aquamarine",
  "autocxx-macro",
  "cxx",
  "moveit",
@@ -127,12 +114,11 @@ dependencies = [
 [[package]]
 name = "autocxx-engine"
 version = "0.30.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9866b109f7091a3470a49906d35c7f34597828be8885508e9395d1194f8283ca"
+source = "git+https://github.com/shigedangao/autocxx.git?branch=main#1c0989db56cc955b0ca9af02092b706fc8ecfe37"
 dependencies = [
- "aquamarine 0.1.12",
+ "aquamarine",
  "autocxx-bindgen",
- "autocxx-parser 0.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "autocxx-parser",
  "cc",
  "cxx-gen",
  "indexmap 1.9.3",
@@ -159,29 +145,11 @@ name = "autocxx-macro"
 version = "0.30.0"
 source = "git+https://github.com/shigedangao/autocxx.git?branch=main#1c0989db56cc955b0ca9af02092b706fc8ecfe37"
 dependencies = [
- "autocxx-parser 0.30.0 (git+https://github.com/shigedangao/autocxx.git?branch=main)",
+ "autocxx-parser",
  "proc-macro-error",
  "proc-macro2",
  "quote",
  "syn 2.0.106",
-]
-
-[[package]]
-name = "autocxx-parser"
-version = "0.30.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bcfc473ec409e612fb0e0c5c4a1b5b7611eca2bac71bc27b3cda98f15a25124"
-dependencies = [
- "indexmap 1.9.3",
- "itertools 0.10.5",
- "log",
- "once_cell",
- "proc-macro2",
- "quote",
- "serde",
- "serde_json",
- "syn 2.0.106",
- "thiserror",
 ]
 
 [[package]]
@@ -218,7 +186,7 @@ dependencies = [
 
 [[package]]
 name = "baklava"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "autocxx",
  "autocxx-build",
@@ -924,15 +892,6 @@ checksum = "dbc5ebe9c3a1a7a5127f920a418f7585e9e758e911d0466ed004f393b0e380b2"
 dependencies = [
  "memchr",
  "serde",
-]
-
-[[package]]
-name = "itertools"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "284f18f85651fe11e8a991b2adb42cb078325c996ed026d994719efcfca1d54b"
-dependencies = [
- "either",
 ]
 
 [[package]]

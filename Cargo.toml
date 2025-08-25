@@ -1,7 +1,7 @@
 [package]
 name = "baklava"
 description = "A rust wrapper around the InsightFace library to perform face comparison"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 authors = ["Marc Intha-amnouay <marc.inthaamnouay@gmail.com>"]
 keywords = ["insightface", "face-comparison", "inspireface"]
@@ -14,6 +14,7 @@ autocxx = "0.30.0"
 
 [patch.crates-io]
 autocxx = { git = "https://github.com/shigedangao/autocxx.git", branch = "main" }
+autocxx-engine = { git = "https://github.com/shigedangao/autocxx.git", branch = "main" }
 
 [build-dependencies]
 autocxx-build = "0.30.0"
