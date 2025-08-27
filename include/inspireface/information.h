@@ -1,0 +1,15 @@
+/**
+ * Created by Jingyu Yan
+ * @date 2024-10-01
+ */
+
+#ifndef INSPIRE_FACE_INFORMATION_H
+#define INSPIRE_FACE_INFORMATION_H
+
+#define INSPIRE_FACE_VERSION_MAJOR_STR "1"
+#define INSPIRE_FACE_VERSION_MINOR_STR "2"
+#define INSPIRE_FACE_VERSION_PATCH_STR "2"
+
+#define INSPIRE_FACE_EXTENDED_INFORMATION "InspireFace[Community Edition]@General - Build Time: 2025-08-24"
+
+#endif  // INSPIRE_FACE_INFORMATION_H
