@@ -1,5 +1,6 @@
 use std::env;
 use std::path::PathBuf;
+use std::process::Command;
 
 fn main() {
     let lib_path = match env::var("INSIGHTFACE_PATH") {
@@ -7,8 +8,20 @@ fn main() {
         Err(_) => {
             let current_dir = env::current_dir().unwrap();
             match env::var("DOCS_RS").is_ok() {
-                // Use the curent_directory which include the "include" directory.
-                true => current_dir,
+                true => {
+                    let out_dir =
+                        env::var("OUT_DIR").expect("Expect to found the out_dir variable");
+
+                    // The headers can be passed from the "zipped" file "insightface_headers.zip"
+                    Command::new("unzip")
+                        .arg("insightface_headers.zip")
+                        .arg("-d")
+                        .arg(&out_dir)
+                        .spawn()
+                        .expect("Expect unzip command to work");
+
+                    current_dir.join(out_dir)
+                }
                 false => {
                     let local_path = format!(
                         "insightface/cpp-package/inspireface/build/inspireface-{}/InspireFace",

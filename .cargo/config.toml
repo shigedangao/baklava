@@ -2,6 +2,6 @@
 rustflags = ["-C", "link-arg=-Wl,-rpath,@executable_path/../lib"]
 
 [env]
-INSIGHTFACE_PATH = "/Users/marcinthaamnouay/workspace/baklava/insightface/cpp-package/inspireface/build/inspireface-macos/InspireFace"
+# INSIGHTFACE_PATH = "/Users/marcinthaamnouay/workspace/baklava/insightface/cpp-package/inspireface/build/inspireface-macos/InspireFace"
 # Enable the setting below to generate documentation locally
-# DOCS_RS = "true"
+DOCS_RS = "true"
