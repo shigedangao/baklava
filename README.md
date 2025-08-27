@@ -23,11 +23,22 @@ cd insightface/cpp-package/inspireface && bash command/build.sh
 INSIGHTFACE_PATH = "<path to>/insightface/cpp-package/inspireface/build/inspireface-<arch>/InspireFace"
 ```
 
+Then you can link the library using the `build.rs` example below:
+
+```rs
+fn main() {
+    if let Ok(path) = std::env::var("INSIGHTFACE_PATH") {
+        let lib_path = format!("{}/lib", path);
+        println!("cargo:rustc-link-arg=-Wl,-rpath,{}", lib_path);
+    }
+}
+```
+
 Thereafter the library can be add as follows in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-baklava = "0.1.0"
+baklava = "0.1.4"
 ```
 
 Below is a simple example of how to use the library:
