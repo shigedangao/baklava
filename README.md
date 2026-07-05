@@ -5,7 +5,7 @@ A small project that wrap the [InsightFace SDK](https://github.com/deepinsight/i
 ## Usage from crates.io
 
 > [!IMPORTANT]
-> This guide required you to download the `insightface` library and to follow the instructions in orders.
+> This guide required you to download the `insightface` library, to compile your own version and to follow the instructions in orders.
 
 1. To use the library you'll need to specify the model that will be used. These models are the same that are used by the InsightFace library. The models can be found [here](https://github.com/HyperInspire/InspireFace?tab=readme-ov-file#resource-package-list)
 
@@ -23,22 +23,11 @@ cd insightface/cpp-package/inspireface && bash command/build.sh
 INSIGHTFACE_PATH = "<path to>/insightface/cpp-package/inspireface/build/inspireface-<arch>/InspireFace"
 ```
 
-Then you can link the library using the `build.rs` example below:
-
-```rs
-fn main() {
-    if let Ok(path) = std::env::var("INSIGHTFACE_PATH") {
-        let lib_path = format!("{}/lib", path);
-        println!("cargo:rustc-link-arg=-Wl,-rpath,{}", lib_path);
-    }
-}
-```
-
-Thereafter the library can be add as follows in your `Cargo.toml`:
+or you can set the `INSIGHTFACE_PATH` environment variable in your shell before building the project. Thereafter the library can be add as follows in your `Cargo.toml` and run the command `cargo build` to link the library:
 
 ```toml
 [dependencies]
-baklava = "0.1.4"
+baklava = "0.1.5"
 ```
 
 Below is a simple example of how to use the library:
@@ -60,41 +49,6 @@ The example can be run by executing the following command:
 
 ```sh
 cargo run --example compare
-```
-
-## Local usage
-
-> [!IMPORTANT]
-> This guide requires you to replace the `build.rs` by the `build_local.rs`. This `build_local.rs` will build the project locally and copy the resulting `dylib` into the target directory.
-
-1. Clone & Initialize submodules
-
-```sh
-git clone --recurse-submodules https://github.com/shigedangao/baklava.git
-
-# or
-
-git submodule update --init --recursive
-```
-
-2. Initialize insightface submodules dependencies
-
-```sh
-cd insightface/cpp-package/inspireface && git clone --recurse-submodules https://github.com/tunmx/inspireface-3rdparty.git 3rdparty
-```
-
-3. Replace the `build.rs` by the `build_local.rs`. This `build_local.rs` will build the project locally and copy the resulting `dylib` into the target directory.
-
-4. Build the project
-
-```sh
-cargo build
-```
-
-5. Make sure that everything works fine by running the unit tests with
-
-```sh
-cargo test
 ```
 
 ## Recompile insightface

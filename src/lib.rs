@@ -21,9 +21,8 @@
 //!
 //! To perform the comparison baklava required you to downlaod a model from the InsightFace repository
 //! that can be found at this link: <https://github.com/HyperInspire/InspireFace?tab=readme-ov-file#resource-package-list>
-use autocxx::c_void;
-use autocxx::c_long;
 use autocxx::prelude::*;
+use autocxx::{c_long, c_void};
 use error::FFIError;
 use ffi_wrapper::{
     baklava_create_image_bitmap_from_path, baklava_create_image_stream_from_bitmap,
@@ -33,12 +32,11 @@ use ffi_wrapper::{
     HFReleaseImageStream, HFReleaseInspireFaceSession, HFRotation, HF_ENABLE_FACE_RECOGNITION,
     HSUCCEED,
 };
-use std::str::FromStr;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::{
     ffi::CString,
     mem::{self},
-    sync::Arc,
+    str::FromStr,
     thread,
 };
 
@@ -154,9 +152,7 @@ impl InsightFace {
             .map(|_| unsafe { mem::zeroed() })
             .collect();
 
-        let images = sources.to_vec();
-        let images_arc_handle = Arc::new(images);
-
+        let images = Arc::new(sources.to_vec());
         let send_session = Arc::new(Mutex::new(SessionHandler {
             session: self.session,
         }));
@@ -172,25 +168,19 @@ impl InsightFace {
         let chf = Arc::new(Mutex::new(chunks_features));
 
         thread::scope(|s| -> Result<(), Box<dyn std::error::Error>> {
-            let img_handle = images_arc_handle.clone();
+            let img_handle = images.clone();
             let session_incr = send_session.clone();
 
             // We avoid getting the feature here as the *mut HFFaceFeature is not Send.
             for idx in 0..chunks_len {
                 let images_clone = img_handle.clone();
-                // Increase ref conting
+                // Increase ref counting of the session
                 let session_incr = session_incr.clone();
 
                 // increase ref counting of chunks features
                 let chf = chf.clone();
 
                 s.spawn(move || -> Result<(), FFIError> {
-                    let images_clone = images_clone.clone();
-                    let session_incr = session_incr.clone();
-
-                    // As we're now spawning a new thread increase again the ref counting
-                    let chf = chf.clone();
-
                     // Acquire the mutex
                     let mut mutex = chf
                         .lock()
@@ -199,9 +189,8 @@ impl InsightFace {
                     let chunk = mutex
                         .get_mut(idx)
                         .ok_or(FFIError::IO("Unable to acquire lock"))?;
-                    let c = chunk;
 
-                    for (iidx, feature) in c.iter_mut().enumerate() {
+                    for (iidx, feature) in chunk.iter_mut().enumerate() {
                         let mut counter = iidx;
                         if idx > 0 {
                             // Increase the counter based on the current position and the chunk_size. This ensure that each thread get it's own photo to process.
@@ -209,7 +198,6 @@ impl InsightFace {
                         }
 
                         let img_path = images_clone
-                            .clone()
                             .get(counter)
                             .map(|s| CString::new(s.as_ref()))
                             .ok_or(FFIError::MissingImage)?
@@ -217,7 +205,7 @@ impl InsightFace {
 
                         InsightFace::prepare_image_for_comparison(
                             feature,
-                            img_path.clone(),
+                            img_path,
                             session_incr.clone(),
                         )
                         .map_err(|_| FFIError::IO("Unable to prepare image"))?;
@@ -282,17 +270,9 @@ impl InsightFace {
             let mut result = c_long(0);
             let img_ptr =
                 baklava_create_image_bitmap_from_path(img_path.as_ptr(), c_int(3), &mut result);
-            match result.0 {
-                SUCCESS => {}
-                _ => {
-                    return Err(
-                        FFIError::Bitmap("image may not be the proper size or format").into(),
-                    )
-                }
-            }
 
-            if img_ptr.is_null() {
-                return Err(FFIError::Bitmap("image bitmap pointer is null").into());
+            if result.0 != SUCCESS || img_ptr.is_null() {
+                return Err(FFIError::Bitmap("image may not be the proper size or format").into());
             }
 
             let mut result = c_long(0);
@@ -301,22 +281,10 @@ impl InsightFace {
                 HFRotation::HF_CAMERA_ROTATION_0,
                 &mut result,
             );
-            match result.0 {
-                SUCCESS => {}
-                _ => {
-                    InsightFace::release_ptr(img_ptr, stream_ptr);
-                    return Err(
-                        FFIError::Stream("Unable to create stream issue with rotation").into(),
-                    );
-                }
-            }
 
-            if stream_ptr.is_null() {
+            if result.0 != SUCCESS || stream_ptr.is_null() {
                 InsightFace::release_ptr(img_ptr, stream_ptr);
-                return Err(FFIError::Stream(
-                    "Unable to create image from stream due to stream_ptr being null",
-                )
-                .into());
+                return Err(FFIError::Stream("Unable to create stream issue with rotation").into());
             }
 
             let mutex = session_handler
@@ -347,6 +315,7 @@ impl InsightFace {
 
             let res =
                 HFFaceFeatureWithRefExtractTo(mutex.session, stream_ptr, single_face, feature);
+
             if res.0 != SUCCESS {
                 InsightFace::release_ptr(img_ptr, stream_ptr);
                 return Err(

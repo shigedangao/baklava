@@ -1,7 +1,8 @@
 [package]
 name = "baklava"
 description = "A rust wrapper around the InsightFace library to perform face comparison"
-version = "0.1.4"
+version = "0.1.5"
+# Keep the edition at 2021 to support autocxx
 edition = "2021"
 authors = ["Marc Intha-amnouay <marc.inthaamnouay@gmail.com>"]
 keywords = ["insightface", "face-comparison", "inspireface"]
@@ -20,7 +21,7 @@ autocxx-engine = { git = "https://github.com/shigedangao/autocxx.git", branch = 
 autocxx-build = "0.30.0"
 
 [dev-dependencies]
-reqwest = { version = "0.12.23", features = ["blocking"] }
+reqwest = { version = "0.13.4", features = ["blocking"] }
 
 [[example]]
 name = "compare"
