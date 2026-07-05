@@ -22,15 +22,16 @@
 //! To perform the comparison baklava required you to downlaod a model from the InsightFace repository
 //! that can be found at this link: <https://github.com/HyperInspire/InspireFace?tab=readme-ov-file#resource-package-list>
 use autocxx::c_void;
+use autocxx::c_long;
 use autocxx::prelude::*;
 use error::FFIError;
 use ffi_wrapper::{
-    HFCreateFaceFeature, HFCreateImageBitmapFromFilePath, HFCreateImageStreamFromImageBitmap,
-    HFCreateInspireFaceSessionOptional, HFDetectMode, HFExecuteFaceTrack, HFFaceBasicToken,
-    HFFaceComparison, HFFaceFeature, HFFaceFeatureWithRefExtractTo, HFGetTokens, HFImageBitmap,
-    HFImageStream, HFLaunchInspireFace, HFMultipleFaceData, HFReleaseFaceFeature,
-    HFReleaseImageBitmap, HFReleaseImageStream, HFReleaseInspireFaceSession, HFRotation, HFSession,
-    HF_ENABLE_FACE_RECOGNITION, HSUCCEED,
+    baklava_create_image_bitmap_from_path, baklava_create_image_stream_from_bitmap,
+    baklava_create_session_optional, HFCreateFaceFeature, HFDetectMode, HFExecuteFaceTrack,
+    HFFaceBasicToken, HFFaceComparison, HFFaceFeature, HFFaceFeatureWithRefExtractTo, HFGetTokens,
+    HFLaunchInspireFace, HFMultipleFaceData, HFReleaseFaceFeature, HFReleaseImageBitmap,
+    HFReleaseImageStream, HFReleaseInspireFaceSession, HFRotation, HF_ENABLE_FACE_RECOGNITION,
+    HSUCCEED,
 };
 use std::str::FromStr;
 use std::sync::Mutex;
@@ -107,9 +108,6 @@ impl InsightFace {
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let model = CString::new(model.as_ref())?;
 
-        let session = HFSession::default();
-        let mut session_ptr: *mut c_void = session as *mut c_void;
-
         // We only need to initialize the model once.
         unsafe {
             if HFLaunchInspireFace(model.as_ptr()).0 != SUCCESS {
@@ -117,20 +115,23 @@ impl InsightFace {
             }
         }
 
-        unsafe {
-            let res = HFCreateInspireFaceSessionOptional(
+        let session_ptr = unsafe {
+            let mut result = c_long(0);
+            let session_ptr = baklava_create_session_optional(
                 c_int(HF_ENABLE_FACE_RECOGNITION as i32),
                 HFDetectMode::HF_DETECT_MODE_ALWAYS_DETECT,
                 c_int(1),
                 c_int(-1),
                 c_int(-1),
-                &mut session_ptr,
+                &mut result,
             );
 
-            if res.0 != SUCCESS {
+            if result.0 != SUCCESS {
                 return Err(FFIError::Session.into());
             }
-        }
+
+            session_ptr
+        };
 
         Ok(Self {
             session: session_ptr,
@@ -277,11 +278,11 @@ impl InsightFace {
                 return Err(FFIError::Feature.into());
             }
 
-            let mut img_ptr = HFImageBitmap::default() as *mut c_void;
-            let mut stream_ptr = HFImageStream::default() as *mut c_void;
-
             // Create bitmap from the file path. This will be used for face analysis
-            match HFCreateImageBitmapFromFilePath(img_path.as_ptr(), c_int(3), &mut img_ptr).0 {
+            let mut result = c_long(0);
+            let img_ptr =
+                baklava_create_image_bitmap_from_path(img_path.as_ptr(), c_int(3), &mut result);
+            match result.0 {
                 SUCCESS => {}
                 _ => {
                     return Err(
@@ -294,13 +295,13 @@ impl InsightFace {
                 return Err(FFIError::Bitmap("image bitmap pointer is null").into());
             }
 
-            match HFCreateImageStreamFromImageBitmap(
+            let mut result = c_long(0);
+            let stream_ptr = baklava_create_image_stream_from_bitmap(
                 img_ptr,
                 HFRotation::HF_CAMERA_ROTATION_0,
-                &mut stream_ptr,
-            )
-            .0
-            {
+                &mut result,
+            );
+            match result.0 {
                 SUCCESS => {}
                 _ => {
                     InsightFace::release_ptr(img_ptr, stream_ptr);

@@ -2,21 +2,22 @@ use autocxx::prelude::*;
 
 include_cpp! {
     #include "inspireface.h"
+    #include "shim.h"
     safety!(unsafe)
     generate!("HFFaceComparison")
     generate!("HFFaceFeatureWithRefExtractTo")
-    generate!("HFCreateInspireFaceSessionOptional")
+    // These InspireFace functions take a `void**` out-param (PHFImageBitmap /
+    // PHFImageStream / PHFSession) which autocxx cannot bind, so we go through
+    // the inline wrappers declared in shim.h that return the handle instead.
+    generate!("baklava_create_session_optional")
+    generate!("baklava_create_image_bitmap_from_path")
+    generate!("baklava_create_image_stream_from_bitmap")
     generate!("HF_ENABLE_FACE_RECOGNITION")
-    generate!("HFSession")
     generate!("HFDetectMode")
     generate!("HFCreateFaceFeature")
     generate!("HSUCCEED")
     generate!("HFLaunchInspireFace")
-    generate!("HFCreateImageBitmapFromFilePath")
-    generate!("HFCreateImageStreamFromImageBitmap")
     generate!("HFReleaseImageBitmap")
-    generate!("HFImageBitmap")
-    generate!("HFImageStream")
     generate!("HFRotation")
     generate!("HFExecuteFaceTrack")
     generate!("HFMultipleFaceData")
