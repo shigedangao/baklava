@@ -100,16 +100,16 @@ impl InsightFace {
     ///
     /// let insight_face = Arc::new(Mutex::new(InsightFace::new("./Megatron", None).unwrap()));
     /// ```
-    pub fn new<S: AsRef<str>>(
+    pub fn new<'a, S: AsRef<str>>(
         model: S,
         chunk_size: Option<usize>,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let model = CString::new(model.as_ref())?;
+    ) -> Result<Self, FFIError<'a>> {
+        let model = CString::new(model.as_ref()).map_err(|_| FFIError::ModelLoad)?;
 
         // We only need to initialize the model once.
         unsafe {
             if HFLaunchInspireFace(model.as_ptr()).0 != SUCCESS {
-                return Err(FFIError::ModelLoad.into());
+                return Err(FFIError::ModelLoad);
             }
         }
 
@@ -125,7 +125,7 @@ impl InsightFace {
             );
 
             if result.0 != SUCCESS {
-                return Err(FFIError::Session.into());
+                return Err(FFIError::Session);
             }
 
             session_ptr
@@ -144,10 +144,10 @@ impl InsightFace {
     /// # Arguments
     ///
     /// * `sources` - `&[S]`
-    pub fn prepare_images<S: AsRef<str> + std::clone::Clone + Send + Sync + Copy>(
+    pub fn prepare_images<'a, S: AsRef<str> + Clone + Send + Sync + Copy>(
         &mut self,
         sources: &[S],
-    ) -> Result<&mut Self, Box<dyn std::error::Error>> {
+    ) -> Result<&mut Self, FFIError<'a>> {
         self.src_features = (0..sources.len())
             .map(|_| unsafe { mem::zeroed() })
             .collect();
@@ -167,7 +167,7 @@ impl InsightFace {
 
         let chf = Arc::new(Mutex::new(chunks_features));
 
-        thread::scope(|s| -> Result<(), Box<dyn std::error::Error>> {
+        thread::scope(|s| -> Result<(), FFIError<'_>> {
             let img_handle = images.clone();
             let session_incr = send_session.clone();
 
@@ -226,10 +226,10 @@ impl InsightFace {
     /// # Arguments
     ///
     /// * `target_img_path` - S
-    pub fn prepare_target_image<S: AsRef<str>>(
+    pub fn prepare_target_image<'a, S: AsRef<str>>(
         &mut self,
         target_img_path: S,
-    ) -> Result<&mut Self, Box<dyn std::error::Error>> {
+    ) -> Result<&mut Self, FFIError<'a>> {
         let send_session = Arc::new(Mutex::new(SessionHandler {
             session: self.session,
         }));
@@ -253,17 +253,17 @@ impl InsightFace {
     /// * `feature` - *mut HFFaceFeature
     /// * `img_path` - CString
     /// * `session_handler` - Arc<Mutex<SessionHandler>>
-    fn prepare_image_for_comparison(
+    fn prepare_image_for_comparison<'a>(
         feature: *mut HFFaceFeature,
         img_path: CString,
         session_handler: Arc<Mutex<SessionHandler>>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), FFIError<'a>> {
         unsafe {
             // Initialize an HFMultipleFaceData structure in the way c++ would do
             let mut multiple_face_data: HFMultipleFaceData = mem::zeroed();
 
             if HFCreateFaceFeature(feature).0 != SUCCESS {
-                return Err(FFIError::Feature.into());
+                return Err(FFIError::Feature);
             }
 
             // Create bitmap from the file path. This will be used for face analysis
@@ -272,7 +272,9 @@ impl InsightFace {
                 baklava_create_image_bitmap_from_path(img_path.as_ptr(), c_int(3), &mut result);
 
             if result.0 != SUCCESS || img_ptr.is_null() {
-                return Err(FFIError::Bitmap("image may not be the proper size or format").into());
+                return Err(FFIError::Bitmap(
+                    "image may not be the proper size or format",
+                ));
             }
 
             let mut result = c_long(0);
@@ -284,7 +286,9 @@ impl InsightFace {
 
             if result.0 != SUCCESS || stream_ptr.is_null() {
                 InsightFace::release_ptr(img_ptr, stream_ptr);
-                return Err(FFIError::Stream("Unable to create stream issue with rotation").into());
+                return Err(FFIError::Stream(
+                    "Unable to create stream issue with rotation",
+                ));
             }
 
             let mutex = session_handler
@@ -293,7 +297,7 @@ impl InsightFace {
 
             if HFExecuteFaceTrack(mutex.session, stream_ptr, &mut multiple_face_data).0 != SUCCESS {
                 InsightFace::release_ptr(img_ptr, stream_ptr);
-                return Err(FFIError::FaceTrack("").into());
+                return Err(FFIError::FaceTrack(""));
             }
 
             let tokens_slice = HFGetTokens(&mut multiple_face_data);
@@ -301,8 +305,7 @@ impl InsightFace {
                 InsightFace::release_ptr(img_ptr, stream_ptr);
                 return Err(FFIError::FaceTrack(
                     "Unable to construct list of tokens due to tokens slice being null",
-                )
-                .into());
+                ));
             }
 
             let tokens_ptr = tokens_slice.ptr as *mut HFFaceBasicToken;
@@ -318,9 +321,9 @@ impl InsightFace {
 
             if res.0 != SUCCESS {
                 InsightFace::release_ptr(img_ptr, stream_ptr);
-                return Err(
-                    FFIError::FaceTrack("Unable to extract feature from stream_ptr").into(),
-                );
+                return Err(FFIError::FaceTrack(
+                    "Unable to extract feature from stream_ptr",
+                ));
             }
 
             // Clean unused memory
@@ -335,10 +338,7 @@ impl InsightFace {
     /// # Arguments
     ///
     /// * `methodology` - Methodology
-    pub fn compare_images(
-        &self,
-        methodology: Methodology,
-    ) -> Result<(f32, f64), Box<dyn std::error::Error>> {
+    pub fn compare_images<'a>(&self, methodology: Methodology) -> Result<(f32, f64), FFIError<'a>> {
         let mut cosine_result = Vec::new();
 
         for feature in self.src_features.iter() {
@@ -346,7 +346,7 @@ impl InsightFace {
             unsafe {
                 let op_res = HFFaceComparison(feature, &self.target_feature, &mut res);
                 if op_res.0 != SUCCESS {
-                    return Err(FFIError::Comparison("Comparison fail").into());
+                    return Err(FFIError::Comparison("Comparison fail"));
                 }
             }
 
@@ -357,8 +357,7 @@ impl InsightFace {
         if cosine_result.len() == 2 && methodology == Methodology::Median {
             return Err(FFIError::Comparison(
                 "Sample size is too small. You should consider to use the mean methodology instead",
-            )
-            .into());
+            ));
         }
 
         let cosine = match methodology {

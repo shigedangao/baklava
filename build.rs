@@ -18,7 +18,7 @@ fn build_documentation() -> PathBuf {
 }
 
 fn main() {
-    let lib_path = match env::var("DOC_RS") {
+    let lib_path = match env::var("DOCS_RS") {
         Ok(_) => build_documentation().to_str().unwrap().to_string(),
         Err(_) => env::var("INSIGHTFACE_PATH").expect("Expect library path to be defined"),
     };
